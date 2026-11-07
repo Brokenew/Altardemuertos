@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Altar de Día de Muertos</title>
+<style>
+  :root{
+    --noche:#1a0f1f; --ciruela:#3a1d3f; --cempa:#f5a623; --papel:#f7ecd9; --magenta:#d6336c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(circle at 50% 0,var(--ciruela),var(--noche) 70%);
+    color:var(--papel);font-family:Georgia,"Times New Roman",serif;min-height:100vh}
+  header{text-align:center;padding:10px 16px 6px}
+  h1{margin:0;font-size:clamp(1.3rem,3.4vw,2rem);font-weight:normal;letter-spacing:.02em;color:var(--cempa)}
+  header p{margin:2px 0 0;opacity:.8;font-style:italic;font-size:.95rem}
+  body{display:flex;flex-direction:column;height:100vh;height:100dvh}
+  main{flex:1;min-height:0;display:flex;justify-content:center;align-items:center;padding:0 8px 8px}
+  #stage{position:relative;display:inline-block;max-width:100%;max-height:100%;line-height:0;border:3px solid var(--cempa);border-radius:6px;overflow:hidden;background:#000}
+  #altar{display:block;width:auto;height:auto;max-width:100%;max-height:calc(100vh - 80px);max-height:calc(100dvh - 80px)}
+  .zona{position:absolute;border:0;padding:0;background:transparent;cursor:pointer;border-radius:10px}
+ .zona:hover,.zona:focus-visible{background:rgba(245,166,35,.18);outline:2px solid var(--cempa)}
+  /* Ventana de información */
+  #velo{position:fixed;inset:0;background:rgba(10,5,14,.75);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+  #velo.abierto{display:flex}
+  .tarjeta{background:var(--papel);color:#2a1a2e;max-width:640px;width:100%;max-height:92vh;overflow:auto;
+    border-radius:8px;border-top:8px solid var(--magenta);display:grid;grid-template-columns:minmax(0,220px) 1fr;
+    gap:20px;padding:22px;position:relative;animation:entra .25s ease-out}
+  @keyframes entra{from{transform:scale(.94);opacity:0}to{transform:none;opacity:1}}
+  .recorte{width:100%;background-repeat:no-repeat;border-radius:6px;border:2px solid var(--cempa);background-color:#000}
+  .tarjeta h2{margin:0 0 10px;font-size:1.6rem;color:var(--magenta);font-weight:normal}
+  .tarjeta p{margin:0;line-height:1.6;font-size:1rem}
+  #cerrar{position:absolute;right:10px;top:6px;background:none;border:0;font-size:1.8rem;cursor:pointer;color:#2a1a2e}
+  @media (max-width:600px){.tarjeta{grid-template-columns:1fr}.recorte{max-width:240px;margin:auto}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Altar de Día de Muertos</h1>
+  <p>Toca cada elemento del altar para conocer su significado</p>
+</header>
+
+<main>
+  <div id="carga">
+    No encuentro la imagen <b>altar.jpg</b> junto a este archivo.<br>
+    Ponla en la misma carpeta con ese nombre, o elígela aquí para probar:<br><br>
+    <input type="file" id="archivo" accept="image/*">
+  </div>
+  <div id="stage"><img id="altar" src="altar.jpg" alt="Altar de Día de Muertos"></div>
+</main>
+
+<div id="velo" role="dialog" aria-modal="true" aria-labelledby="tit">
+  <div class="tarjeta">
+    <button id="cerrar" aria-label="Cerrar">&times;</button>
+    <div class="recorte" id="recorte"></div>
+    <div><h2 id="tit"></h2><p id="txt"></p></div>
+  </div>
+</div>
+
+<script>
+/* ===== TEXTOS (puedes editarlos aquí) ===== */
+const INFO = {
+  cruz:{t:"La cruz",d:"En muchos altares se coloca una cruz hecha de sal, cal, ceniza o pétalos sobre el suelo. Sus cuatro brazos señalan los cuatro puntos cardinales y ayudan al alma a orientarse para encontrar el camino de regreso. También refleja la mezcla de creencias prehispánicas y católicas que da forma a esta tradición."},
+  velas:{t:"Las velas",d:"La luz de las velas guía a las almas desde el mundo de los muertos hasta el hogar de su familia. Representan la fe, la esperanza y el fuego como elemento del altar. Se prenden para que ninguna alma se pierda en la oscuridad durante el viaje."},
+  fotos:{t:"Fotografías del difunto",d:"Las fotos de los seres queridos que ya no están ocupan un lugar central del altar. Son la forma de invitarlos por su nombre y de recordar quiénes fueron, así que el altar se arma pensando en ellos y en lo que más disfrutaban."},
+  fruta:{t:"La fruta",d:"Naranjas, mandarinas, jícamas, tejocotes, guayabas y cañas de azúcar suelen formar parte de la ofrenda. Representan la abundancia de la tierra y la dulzura de la vida. Son frutas de temporada, de la época de la cosecha en que se celebra el Día de Muertos."},
+  alcohol:{t:"Bebidas alcohólicas",d:"Se ofrece la bebida favorita del difunto, como mezcal, tequila, pulque o cerveza. Es una manera de brindar con él una vez más y de compartir lo que disfrutaba en vida. Cada familia elige según los gustos de su ser querido."},
+  comida:{t:"La comida y los tamales",d:"Mole, arroz, tamales y otros platillos preparados con cariño se sirven para que el alma recupere fuerzas tras su largo viaje. Se cree que los difuntos disfrutan la esencia y el aroma de la comida. Después, la familia la comparte y la come."},
+  papel:{t:"El papel picado",d:"Estas banderitas de papel de colores, recortadas a mano con figuras y calaveras, adornan el altar y representan el elemento aire. Su fragilidad recuerda lo delicada que es la vida, y sus colores alegres dan la bienvenida a las almas."},
+  cempa:{t:"La flor de cempasúchil",d:"Su nombre viene del náhuatl y se relaciona con \"veinte flores\" o \"flor de muchos pétalos\". Su intenso color naranja y su aroma fuerte guían a las almas hasta el altar, y por eso se hacen caminos de pétalos desde la calle hasta la ofrenda. Es la flor emblemática del Día de Muertos en México."},
+  agua:{t:"El agua",d:"Se coloca un vaso o jarra de agua para calmar la sed de las almas después de su largo camino. También simboliza la pureza y la vida, y es uno de los elementos básicos del altar."},
+  incienso:{t:"El incienso y el copal",d:"El humo del copal, una resina usada desde la época prehispánica, purifica el espacio y aleja a los malos espíritus. Su aroma también ayuda a marcar el camino hacia el altar y se considera un puente entre el mundo de los vivos y el de los muertos."},
+  pan:{t:"El pan de muerto",d:"Es un pan dulce, muchas veces aromatizado con anís o azahar, decorado con tiras que simulan huesos y una pequeña bolita en el centro. Su forma redonda representa el ciclo de la vida y la muerte, y las tiras de masa recuerdan los huesos y las lágrimas. Se prepara en los días previos al 1 y 2 de noviembre, se coloca en la ofrenda y después se comparte en familia, a veces con chocolate caliente. Cada región de México lo prepara a su manera."},
+  calaveras:{t:"Las calaveras de azúcar o chocolate",d:"Estas pequeñas calaveras suelen llevar un nombre escrito en la frente y se regalan a los vivos y a los difuntos. Representan la actitud mexicana de convivir con la muerte con humor y cariño, sin temerle. Su dulzura recuerda que recordar a quienes se fueron también puede ser alegre."},
+  calabaza:{t:"La calabaza en tacha",d:"Es un postre tradicional hecho con calabaza cocida lentamente con piloncillo, canela y a veces naranja. Representa la cosecha de otoño y es uno de los dulces típicos de las ofrendas. Su aroma a canela es de los más reconocibles de la temporada."}
+};
+
+/* ===== ZONAS CLICABLES: x, y = esquina superior izquierda; w, h = tamaño (en % de la imagen) ===== */
+let ZONAS = [
+  {id:"cruz",x:47,y:35.9,w:6.6,h:16.3},
+  {id:"velas",x:41.9,y:50.9,w:4.2,h:11.7},
+  {id:"velas",x:56.2,y:62.1,w:3.9,h:13.2},
+  {id:"velas",x:17.7,y:79.6,w:4.1,h:13},
+  {id:"velas",x:67,y:78.7,w:4.9,h:15.5},
+  {id:"velas",x:63.1,y:44.6,w:2.9,h:8.5},
+  {id:"velas",x:34.8,y:42,w:3.8,h:10},
+  {id:"velas",x:30.9,y:76,w:3.9,h:18.5},
+  {id:"velas",x:87.9,y:82.3,w:3.7,h:14.8},
+  {id:"velas",x:26.8,y:62.7,w:3.8,h:11.8},
+  {id:"fotos",x:51.4,y:53.5,w:3,h:9},
+  {id:"fotos",x:48.1,y:54.1,w:3.1,h:8.5},
+  {id:"fruta",x:47.3,y:64.7,w:9.2,h:9.9},
+  {id:"alcohol",x:41,y:60.5,w:3.7,h:14.4},
+  {id:"comida",x:30.6,y:63.9,w:10,h:10},
+  {id:"comida",x:54.8,y:55.3,w:6.9,h:7.6},
+  {id:"papel",x:14.2,y:0,w:30.3,h:19.9},
+  {id:"papel",x:53.4,y:0,w:30,h:19.9},
+  {id:"papel",x:36.1,y:75,w:30.2,h:12.8},
+  {id:"cempa",x:13,y:51.2,w:14.1,h:21.9},
+  {id:"cempa",x:19.8,y:35.9,w:11.3,h:14.9},
+  {id:"cempa",x:70.2,y:35.6,w:10,h:14.7},
+  {id:"cempa",x:76.2,y:53.5,w:10.9,h:33},
+  {id:"cempa",x:41.8,y:20.7,w:16.8,h:14.6},
+  {id:"cempa",x:40.9,y:35,w:5.4,h:16.2},
+  {id:"cempa",x:54.5,y:35.8,w:5.6,h:16},
+  {id:"agua",x:62,y:54,w:3.9,h:8.9},
+  {id:"incienso",x:66.6,y:54.5,w:5.6,h:8.6},
+  {id:"pan",x:68.8,y:67.2,w:6.6,h:9.6},
+  {id:"pan",x:37,y:54.7,w:4.7,h:9.3},
+  {id:"calaveras",x:60.4,y:65,w:8.2,h:11.2},
+  {id:"calabaza",x:30.2,y:50.5,w:6.7,h:13}
+];
+
+/* ===== A PARTIR DE AQUÍ NO HACE FALTA TOCAR NADA ===== */
+const $ = s => document.querySelector(s);
+const stage = $("#stage"), img = $("#altar");
+
+function dibujar(){
+  stage.querySelectorAll(".zona").forEach(z => z.remove());
+  ZONAS.forEach((z,i) => {
+    const b = document.createElement("button");
+    b.className = "zona";
+    b.setAttribute("aria-label", INFO[z.id].t);
+    b.style.cssText = `left:${z.x}%;top:${z.y}%;width:${z.w}%;height:${z.h}%`;
+    b.addEventListener("click", () => abrir(z));
+    stage.appendChild(b);
+  });
+}
+
+function abrir(z){
+  const i = INFO[z.id];
+  $("#tit").textContent = i.t; $("#txt").textContent = i.d;
+  const r = $("#recorte");
+  const nw = img.naturalWidth || 1, nh = img.naturalHeight || 1;
+  r.style.backgroundImage = `url("${img.src}")`;
+  r.style.backgroundSize = `${100/z.w*100}% auto`;
+  r.style.backgroundPosition = `${z.w>=100?0:z.x/(100-z.w)*100}% ${z.h>=100?0:z.y/(100-z.h)*100}%`;
+  r.style.aspectRatio = `${z.w*nw} / ${z.h*nh}`;
+  $("#velo").classList.add("abierto");
+  $("#cerrar").focus();
+}
+const cerrar = () => $("#velo").classList.remove("abierto");
+$("#cerrar").onclick = cerrar;
+$("#velo").onclick = e => { if(e.target.id==="velo") cerrar(); };
+document.addEventListener("keydown", e => { if(e.key==="Escape") cerrar(); });
+
+img.onerror = () => { $("#carga").style.display="block"; stage.style.display="none"; };
+$("#archivo").onchange = e => {
+  const f = e.target.files[0]; if(!f) return;
+  img.src = URL.createObjectURL(f);
+  $("#carga").style.display="none"; stage.style.display="inline-block";
+};
+dibujar();
+</script>
+</body>
+</html>
